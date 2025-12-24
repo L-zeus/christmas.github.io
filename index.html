@@ -41,7 +41,7 @@
             font-size: 3em;
             margin-bottom: 20px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            transition: transform 0.6s ease, opacity 0.6s ease; /* 开场标题动画 */
+            transition: transform 0.6s ease, opacity 0.6s ease;
         }
 
         #ui-layer p {
@@ -113,27 +113,24 @@
     </div>
     <div id="loader">Loading...</div>
     <script>
-        // Global variables
-        const jingle = new Audio('merry.mp3'); // 圣诞音乐
+        const jingle = new Audio('merry.mp3');
         let scene, camera, renderer, controls, mainGroup, particleSystem = [],
             gui;
         let mouse = new THREE.Vector2(),
             raycaster = new THREE.Raycaster();
         let treeData = [];
-        let baseParticleColor = new THREE.Color(0.1, 0.7, 1.0); // 初始粒子颜色
-        let baseDustColor = new THREE.Color(0.4, 0.2, 0.1); // 初始粉尘颜色
-        let started = false; // 是否已开始
-        let opening = { active: false, t: 0 }; // 开场时间轴（秒）
+        let baseParticleColor = new THREE.Color(0.1, 0.7, 1.0);
+        let baseDustColor = new THREE.Color(0.4, 0.2, 0.1);
+        let started = false;
+        let opening = { active: false, t: 0 };
 
-        // State management
         const STATE = {
             rotation: { x: 0, y: 0 },
-            dampFactor: 0.25, // 旋转阻尼系数
-            mode: 'SCATTER', // SCATTER, TREE, FOCUS
+            dampFactor: 0.25,
+            mode: 'SCATTER',
             focusTarget: null,
         };
 
-        // Configuration
         const CONFIG = {
             numParticles: 800,
             particleSize: 0.12,
@@ -144,18 +141,16 @@
             levels: 6,
             sphereRadius: 4,
             rotationSpeed: 0.3,
-            enableLights: true, // 启用/禁用灯光
-            lineWidth: 2,  // 调整线条粗细
-            lineOpacity: 0.4, // 调整线条透明度
-            baseColor: '#1a91eb', // 主色
-            dustColor: '#66330b', // 土色,
+            enableLights: true,
+            lineWidth: 2,
+            lineOpacity: 0.4,
+            baseColor: '#1a91eb',
+            dustColor: '#66330b',
             bloomThreshold: 0.0,
             bloomStrength: 0.5,
             bloomRadius: 0.5,
         };
 
-
-        // 导入 Bloom 相关库
         const EffectComposer = THREE.EffectComposer.EffectComposer;
         const RenderPass = THREE.EffectComposer.RenderPass;
         const ShaderPass = THREE.EffectComposer.ShaderPass;
@@ -171,7 +166,7 @@
                 this.mesh = new THREE.Mesh(this.geometry, this.material);
                 this.mesh.castShadow = true;
                 this.mesh.receiveShadow = false;
-                this.originalColor = this.color.clone(); // 保存原始颜色
+                this.originalColor = this.color.clone();
 
                 this.posScatter = new THREE.Vector3();
                 this.posTree = new THREE.Vector3();
@@ -180,7 +175,6 @@
             }
 
             reset() {
-                // Random position in sphere
                 let theta = 2 * Math.PI * Math.random();
                 let phi = Math.acos(2 * Math.random() - 1);
                 let radius = CONFIG.sphereRadius * (0.5 + Math.random() * 0.5);
@@ -194,22 +188,17 @@
                 this.mesh.scale.set(1, 1, 1);
             }
 
-            // 将散射位置外推到更大半径，用于开场爆散
             explodeScatter(mult = 2.2) {
                 this.posScatter.multiplyScalar(mult);
             }
 
-            // 开场收敛时，使用更快的插值与更强的回正
             openingConverge(dt) {
-                // 位置：更快靠近当前模式目标（此处在外部切到 TREE 后生效）
                 this.mesh.position.lerp(this.posTree, 6.5 * dt);
-                // 旋转：迅速回正并略加自转
                 this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, 6.0 * dt);
                 this.mesh.rotation.z = THREE.MathUtils.lerp(this.mesh.rotation.z, 0, 6.0 * dt);
                 this.mesh.rotation.y += 1.2 * dt;
-                // 缩放：逐步恢复基础
                 const s = this.baseScale;
-                this.mesh.scale.lerp(new THREE.Vector3(s,s,s), 6.0 * dt);
+                this.mesh.scale.lerp(new THREE.Vector3(s, s, s), 6.0 * dt);
             }
 
             update(dt, mode, focusTarget) {
@@ -219,10 +208,8 @@
                     targetPos = this.posTree;
                 } else if (mode === 'FOCUS' && focusTarget) {
                     targetPos = focusTarget.position;
-                    // 粒子飞向焦点时颜色变亮
                     this.material.color.lerp(new THREE.Color(0xffffff), 0.02);
                 } else {
-                    // 恢复原始颜色
                     this.material.color.lerp(this.originalColor, 0.02);
                 }
 
@@ -230,7 +217,6 @@
                 this.mesh.rotation.y += 0.015;
                 this.mesh.rotation.z += 0.01;
 
-                // Scale based on distance
                 let scale = this.baseScale * (1 + Math.sin(performance.now() / 2000) * 0.2);
                 this.mesh.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.05);
             }
@@ -246,40 +232,38 @@
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 阴影类型
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ReinhardToneMapping;
             renderer.toneMappingExposure = 2.8;
             document.body.appendChild(renderer.domElement);
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true; // 启用阻尼效果
-            controls.dampingFactor = STATE.dampFactor; // 阻尼系数
-            controls.screenSpacePanning = false; // 禁用屏幕空间平移
-            controls.minDistance = 5; // 最小缩放距离
-            controls.maxDistance = 30; // 最大缩放距离
-            controls.maxPolarAngle = Math.PI / 2; // 限制垂直视角
+            controls.enableDamping = true;
+            controls.dampingFactor = STATE.dampFactor;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 5;
+            controls.maxDistance = 30;
+            controls.maxPolarAngle = Math.PI / 2;
 
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // Lights
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.8); // 柔和的环境光
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
             scene.add(ambientLight);
 
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
             directionalLight.position.set(3, 7, 5);
             directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 1024; // 阴影贴图宽度
-            directionalLight.shadow.mapSize.height = 1024; // 阴影贴图高度
-            directionalLight.shadow.camera.near = 0.1; // 阴影相机近截面
-            directionalLight.shadow.camera.far = 20; // 阴影相机远截面
-            directionalLight.shadow.camera.top = 8; // 阴影相机视锥上边界
-            directionalLight.shadow.camera.bottom = -8; // 阴影相机视锥下边界
-            directionalLight.shadow.camera.left = -8; // 阴影相机视锥左边界
-            directionalLight.shadow.camera.right = 8; // 阴影相机视锥右边界
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            directionalLight.shadow.camera.near = 0.1;
+            directionalLight.shadow.camera.far = 20;
+            directionalLight.shadow.camera.top = 8;
+            directionalLight.shadow.camera.bottom = -8;
+            directionalLight.shadow.camera.left = -8;
+            directionalLight.shadow.camera.right = 8;
             scene.add(directionalLight);
 
-            // 小球灯光
             const sphereGeometry = new THREE.SphereGeometry(0.3, 24, 24);
             const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xffffee });
             const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
@@ -290,7 +274,6 @@
             pointLight.position.set(0, 6, 0);
             sphere.add(pointLight);
 
-            // 星星灯光
             const starGeometry = new THREE.OctahedronGeometry(0.8);
             const starMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffee,
@@ -303,21 +286,18 @@
             star.receiveShadow = false;
             mainGroup.add(star);
 
-            // Add particles
             for (let i = 0; i < CONFIG.numParticles; i++) {
                 const particle = new Particle();
                 particleSystem.push(particle);
                 mainGroup.add(particle.mesh);
             }
 
-            // Add dust particles
             for (let i = 0; i < CONFIG.dustAmount; i++) {
                 const particle = new Particle(true);
                 particleSystem.push(particle);
                 mainGroup.add(particle.mesh);
             }
 
-            // Build tree data
             for (let i = 0; i < CONFIG.levels; i++) {
                 const levelRadius = CONFIG.treeBaseRadius * (1 - i / CONFIG.levels);
                 const levelHeight = CONFIG.treeHeight * (i / CONFIG.levels);
@@ -326,7 +306,6 @@
 
             positionParticlesToTree();
 
-            // Postprocessing: Bloom Effect
             composer = new EffectComposer(renderer);
 
             const renderPass = new RenderPass(scene, camera);
@@ -339,7 +318,6 @@
 
             composer.addPass(bloomPass);
 
-            // GUI
             gui = new dat.GUI();
             gui.add(CONFIG, 'particleSize', 0.05, 0.5).onChange(updateParticleSize);
             gui.add(CONFIG, 'dustSize', 0.1, 0.8).onChange(updateDustSize);
@@ -366,7 +344,6 @@
         }
 
         function updateLights() {
-            // 遍历场景中的所有灯光，设置其可见性
             scene.traverse(function (node) {
                 if (node instanceof THREE.Light) {
                     node.visible = CONFIG.enableLights;
@@ -375,7 +352,6 @@
         }
 
         function updateLineWidth() {
-            // 遍历场景中的所有线段材质，更新线宽
             scene.traverse(function (node) {
                 if (node instanceof THREE.Line && node.material) {
                     node.material.linewidth = CONFIG.lineWidth;
@@ -384,7 +360,6 @@
         }
 
         function updateLineOpacity() {
-            // 遍历场景中的所有线段材质，更新透明度
             scene.traverse(function (node) {
                 if (node instanceof THREE.Line && node.material) {
                     node.material.opacity = CONFIG.lineOpacity;
@@ -467,15 +442,12 @@
                     if (started) return;
                     started = true;
 
-                    // 1) 爆散：把所有粒子外推到更大散射半径，并暂时切到 SCATTER
                     particleSystem.forEach(p => p.explodeScatter?.(p.isDust ? 2.8 : 2.2));
                     STATE.mode = 'SCATTER';
                     STATE.focusTarget = null;
 
-                    // 播放音乐
                     jingle.play();
 
-                    // 标题脉冲
                     const title = document.querySelector('#ui-layer h1');
                     if (title) {
                         title.style.transition = 'transform .6s ease, opacity .6s ease';
@@ -483,16 +455,13 @@
                         setTimeout(() => { title.style.transform = 'scale(1)'; }, 700);
                     }
 
-                    // 隐藏按钮和加载层
                     startBtn.classList.add('hidden');
                     const loader = document.getElementById('loader');
                     if (loader) { loader.style.opacity = 0; setTimeout(() => loader.remove(), 800); }
 
-                    // 激活开场时间轴
                     opening.active = true;
                     opening.t = 0;
 
-                    // 0.6s 后切换到 TREE，开始收敛
                     setTimeout(() => { STATE.mode = 'TREE'; }, 600);
                 });
             }
@@ -544,19 +513,15 @@
             requestAnimationFrame(animate);
             const dt = clock.getDelta();
 
-            // 开场时间轴：0~0.6s 爆散旋转加速；0.6s 后收敛到树并减速
             if (opening.active) {
                 opening.t += dt;
 
-                // 前 0.6s：增强主组自转和粒子自转，制造爆散动感
                 if (opening.t < 0.6) {
-                    STATE.rotation.y += 1.6 * dt; // 快速自转
+                    STATE.rotation.y += 1.6 * dt;
                 } else {
-                    // 进入收敛阶段，直到 2.2s 结束
-                    // 加强每个粒子的收敛到树的速度与回正（在 Particle.openingConverge 内处理）
+
                 }
 
-                // 树顶星闪烁：在 0.6~1.2s 之间做一次脉冲
                 if (opening.t > 0.6 && opening.t < 1.2) {
                     const star = mainGroup.children.find(m => m.geometry && m.geometry.type === 'OctahedronGeometry');
                     if (star && star.material && star.material.emissiveIntensity !== undefined) {
@@ -565,20 +530,16 @@
                     }
                 }
 
-                // 2.2s 后结束开场，恢复正常
                 if (opening.t > 2.2) {
                     opening.active = false;
                 }
             }
 
-            // Apply damping to the rotation
             STATE.rotation.x += (0 - STATE.rotation.x) * STATE.dampFactor;
             STATE.rotation.y += (CONFIG.rotationSpeed / 40 - STATE.rotation.y) * STATE.dampFactor;
 
             if (opening.active && opening.t >= 0.6) {
-                // 将旋转逐步过渡到正常巡航（减速）
                 STATE.rotation.y += (0.3 - (STATE.rotation.y - mainGroup.rotation.y)) * 0.2 * dt;
-                // 回正 X
                 STATE.rotation.x += (0 - STATE.rotation.x) * 2.5 * dt;
             }
 
@@ -587,7 +548,6 @@
 
             particleSystem.forEach(p => {
                 if (opening.active && opening.t >= 0.6 && STATE.mode === 'TREE' && !p.isDust) {
-                    // 非粉尘粒子在开场收敛阶段使用更强插值
                     p.openingConverge(dt);
                 } else {
                     p.update(dt, STATE.mode, STATE.focusTarget);
@@ -595,7 +555,6 @@
             });
 
             controls.update();
-            // 使用 composer 进行渲染
             composer.render();
         }
 
@@ -605,11 +564,11 @@
         animate();
     </script>
 
-<!-- EffectComposer, RenderPass, ShaderPass, UnrealBloomPass -->
-<script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/ShaderPass.js"></script>
-<script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.1/examples/js/postprocessing/UnrealBloomPass.js"></script>
 </body>
 
 </html>
+
